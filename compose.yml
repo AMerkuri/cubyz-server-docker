@@ -1,0 +1,48 @@
+services:
+  cubyz-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Uncomment and set build arguments as needed
+      # args:
+      #   - GIT_REPO=https://github.com/BoySanic/Cubyz.git
+      #   - GIT_BRANCH=headless-runtime-v2
+      #   - USER_UID=1000
+      #   - USER_GID=1000
+    container_name: cubyz-server
+    network_mode: host
+    labels:
+      - "autoheal=true"
+    volumes:
+      # Persist world data
+      - ./saves:/cubyz/saves:z
+    environment:
+      # Server configuration via environment variables
+      CUBYZ_WORLD_NAME: world2
+    restart: unless-stopped
+    # Resource limits (optional, adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f Cubyz && nc -uz -w1 127.0.0.1 47649 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  autoheal:
+    image: docker.io/willfarrell/autoheal:latest
+    container_name: autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+      - AUTOHEAL_INTERVAL=10
+      - AUTOHEAL_START_PERIOD=30
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
