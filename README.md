@@ -30,6 +30,8 @@ services:
     restart: unless-stopped
 ```
 
+> **Note**: For a full `compose.yml` example with auto-heal and health checks, see [`compose.yml`](https://github.com/AMerkuri/cubyz-server-docker/blob/main/compose.yml).
+
 Then run:
 
 ```bash
