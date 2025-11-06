@@ -1,5 +1,7 @@
 services:
   cubyz-server:
+    # Use pre-built image from GHCR or build locally
+    # image: ghcr.io/amerkuri/cubyz-server-docker:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -18,7 +20,7 @@ services:
       - ./saves:/cubyz/saves:z
     environment:
       # Server configuration via environment variables
-      CUBYZ_WORLD_NAME: world2
+      CUBYZ_WORLD_NAME: world
     restart: unless-stopped
     # Resource limits (optional, adjust as needed)
     deploy:
