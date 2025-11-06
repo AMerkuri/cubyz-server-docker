@@ -4,7 +4,7 @@ Docker container for running Cubyz headless server with multi-architecture suppo
 
 ## Quick Start
 
-### Using Pre-built Image
+### Using Docker CLI
 
 ```bash
 docker run -d \
@@ -15,6 +15,22 @@ docker run -d \
 ```
 
 ### Using Docker Compose
+
+Create a `compose.yml` file:
+
+```yaml
+services:
+  cubyz:
+    image: ghcr.io/amerkuri/cubyz-server-docker:latest
+    network_mode: host
+    volumes:
+      - ./saves:/cubyz/saves
+    environment:
+      - CUBYZ_WORLD_NAME=myworld
+    restart: unless-stopped
+```
+
+Then run:
 
 ```bash
 # Start server
@@ -54,7 +70,7 @@ docker build \
   .
 ```
 
-Or in `docker-compose.yml`:
+Or in `compose.yml`:
 
 ```yaml
 services:
