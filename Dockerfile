@@ -25,11 +25,15 @@ RUN ./scripts/install_compiler_linux.sh
 # Build the server in release mode for Alpine (musl libc)
 RUN ARCH=$(uname -m) && \
     echo "Building for native architecture: $ARCH with musl libc" && \
+    # Retry the build up to 3 times if it fails due to network issues
+    for i in 1 2 3; do \
     ./compiler/zig/zig build \
     -Dtarget=${ARCH}-linux-musl \
     -Doptimize=ReleaseFast \
     -Drelease=true \
-    -Dcpu=baseline
+    -Dcpu=baseline && break || \
+    (echo "Build attempt $i failed, retrying..." && sleep 5); \
+    done
 
 # Stage 2: Runtime stage
 FROM alpine:3.20
