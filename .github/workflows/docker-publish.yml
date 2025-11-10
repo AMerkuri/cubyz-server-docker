@@ -104,16 +104,18 @@ jobs:
         id: tags
         run: |
           set -euo pipefail
+          REPO="${{ env.IMAGE_NAME }}"
+          REPO_LC="${REPO,,}"
           {
             # Include metadata-action computed tags (branches/PRs, etc.)
             echo "${{ steps.meta.outputs.tags }}" | sed '/^$/d'
             # Add normalized release tags when applicable
             if [ "${{ steps.tagvars.outputs.has_version }}" = "true" ]; then
-              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tagvars.outputs.version }}"
-              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tagvars.outputs.major_minor }}"
-              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tagvars.outputs.major }}"
+              echo "${{ env.REGISTRY }}/${REPO_LC}:${{ steps.tagvars.outputs.version }}"
+              echo "${{ env.REGISTRY }}/${REPO_LC}:${{ steps.tagvars.outputs.major_minor }}"
+              echo "${{ env.REGISTRY }}/${REPO_LC}:${{ steps.tagvars.outputs.major }}"
               if [ "${{ steps.tagvars.outputs.is_latest }}" = "true" ]; then
-                echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+                echo "${{ env.REGISTRY }}/${REPO_LC}:latest"
               fi
             fi
           } | awk 'NF' | sort -u > tag_list.txt
