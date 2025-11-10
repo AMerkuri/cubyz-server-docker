@@ -97,7 +97,10 @@ services:
 
 ## Image Versioning
 
-Docker image tags track upstream Cubyz releases published at <https://github.com/PixelGuys/Cubyz/tags>. Upstream tags use plain semantic versioning (`0.0.1`). For any upstream release, a multi-architecture image (`linux/amd64`, `linux/arm64`) is built and pushed.
+Docker image tags track upstream Cubyz releases published at <https://github.com/PixelGuys/Cubyz/tags>. Upstream tags use plain semantic versioning (`0.0.1`). For any upstream release, a multi-architecture image (`linux/amd64`, `linux/arm64`) is built and pushed:
+
+- `X.Y.Z` – Exact version (e.g., `0.0.1`).
+- `latest` – Most recent upstream release.
 
 ### Picking a Tag
 
