@@ -12,7 +12,8 @@ services:
       #   - USER_UID=1000
       #   - USER_GID=1000
     container_name: cubyz-server
-    network_mode: host
+    ports:
+      - "47649:47649/udp"
     labels:
       - "autoheal=true"
     volumes:

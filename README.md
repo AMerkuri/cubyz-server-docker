@@ -8,7 +8,7 @@ Docker container for running Cubyz headless server with multi-architecture suppo
 
 ```bash
 docker run -d \
-  --network host \
+  -p 47649:47649/udp \
   -v cubyz-saves:/cubyz/saves \
   -e CUBYZ_WORLD_NAME=myworld \
   ghcr.io/amerkuri/cubyz-server-docker:latest
@@ -22,7 +22,8 @@ Create a `compose.yml` file:
 services:
   cubyz:
     image: ghcr.io/amerkuri/cubyz-server-docker:latest
-    network_mode: host
+    ports:
+      - "47649:47649/udp"
     volumes:
       - ./saves:/cubyz/saves
     environment:
@@ -119,4 +120,4 @@ docker buildx build \
     Ensure the volume for saves is correctly mounted, existing world is present at `saves/world` and has appropriate permissions.
 
 - **Unknown connection from address: 192.168.x.x:30287**
-    Use host networking mode in Docker to avoid NAT issues
+    Use host networking mode `--network host` in Docker to avoid NAT issues
