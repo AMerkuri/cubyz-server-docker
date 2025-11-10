@@ -102,6 +102,8 @@ Docker image tags track upstream Cubyz releases published at <https://github.com
 - `X.Y.Z` – Exact version (e.g., `0.0.1`).
 - `latest` – Most recent upstream release.
 
+To see all available images, visit: <https://github.com/AMerkuri/cubyz-server-docker/pkgs/container/cubyz-server-docker>
+
 ### Picking a Tag
 
 For reproducible deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades.

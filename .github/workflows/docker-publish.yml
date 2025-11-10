@@ -47,7 +47,6 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
             type=ref,event=pr
             # Release-driven tags are added via TAG_LIST assembly step below
 
