@@ -87,9 +87,12 @@ jobs:
           while read -r ORIG NORM; do
             [ -z "$ORIG" ] && continue
             echo "Dispatching build for $ORIG (normalized: $NORM) to ${TARGET_REPOSITORY}"
-            curl -sS -X POST \
+            if ! curl -sSf -X POST \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${GITHUB_TOKEN}" \
               "https://api.github.com/repos/${TARGET_REPOSITORY}/dispatches" \
               -d "{\"event_type\":\"cubyz-release\",\"client_payload\":{\"tag\":\"${ORIG}\"}}"
+            then
+              echo "Failed to dispatch for $ORIG" >&2
+            fi
           done < missing_limited_pairs.txt
