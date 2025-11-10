@@ -5,8 +5,8 @@
 FROM alpine:3.20 AS builder
 
 # Build arguments for repository configuration
-ARG GIT_REPO=https://github.com/BoySanic/Cubyz.git
-ARG GIT_BRANCH=headless-runtime-v2
+ARG GIT_REPO=https://github.com/PixelGuys/Cubyz
+ARG GIT_BRANCH=master
 
 # Install build dependencies
 RUN apk add --no-cache bash build-base linux-headers wget xz tar ca-certificates git \

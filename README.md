@@ -55,8 +55,8 @@ docker compose down
 
 You can customize the build process using these arguments:
 
-- `GIT_REPO` - Cubyz repository URL (default: `https://github.com/BoySanic/Cubyz.git`)
-- `GIT_BRANCH` - Git branch to build from (default: `headless-runtime-v2`)
+- `GIT_REPO` - Cubyz repository URL (default: `https://github.com/PixelGuys/Cubyz`)
+- `GIT_BRANCH` - Git branch to build from (default: `master`)
 - `USER_UID` - User ID for the cubyz user (default: `1000`)
 - `USER_GID` - Group ID for the cubyz group (default: `1000`)
 

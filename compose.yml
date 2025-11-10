@@ -7,8 +7,8 @@ services:
       dockerfile: Dockerfile
       # Uncomment and set build arguments as needed
       # args:
-      #   - GIT_REPO=https://github.com/BoySanic/Cubyz.git
-      #   - GIT_BRANCH=headless-runtime-v2
+      #   - GIT_REPO=https://github.com/PixelGuys/Cubyz
+      #   - GIT_BRANCH=master
       #   - USER_UID=1000
       #   - USER_GID=1000
     container_name: cubyz-server
