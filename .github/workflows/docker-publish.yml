@@ -10,6 +10,8 @@ on:
     branches:
       - main
   workflow_dispatch:
+  repository_dispatch:
+    types: [cubyz-release]
 
 env:
   REGISTRY: ghcr.io
@@ -47,10 +49,78 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            # Release-driven tags are added via TAG_LIST assembly step below
+
+      - name: Determine upstream ref (tag/branch)
+        id: upstream
+        env:
+          CLIENT_TAG: ${{ github.event.client_payload.tag }}
+        run: |
+          set -euo pipefail
+          REF=""
+          if [ -n "${CLIENT_TAG:-}" ]; then
+            REF="${CLIENT_TAG}"
+          elif [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            REF="${GITHUB_REF_NAME}"
+          else
+            REF="master"
+          fi
+          echo "UPSTREAM_REF=${REF}" >> "$GITHUB_ENV"
+          echo "upstream_ref=${REF}" >> "$GITHUB_OUTPUT"
+          echo "Using UPSTREAM_REF=${REF}"
+
+      - name: Compute release tag variants and latest eligibility
+        id: tagvars
+        run: |
+          set -euo pipefail
+          REF='${{ steps.upstream.outputs.upstream_ref }}'
+          NUM="$REF"
+          case "$REF" in
+            v*) NUM="${REF#v}";;
+          esac
+          if [[ "$NUM" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            MAJOR="${NUM%%.*}"
+            REST="${NUM#*.}"
+            MINOR="${REST%%.*}"
+            echo "has_version=true" >> "$GITHUB_OUTPUT"
+            echo "version=$NUM" >> "$GITHUB_OUTPUT"
+            echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
+            echo "major_minor=$MAJOR.$MINOR" >> "$GITHUB_OUTPUT"
+            # Determine if this is the latest upstream release
+            curl -sS "https://api.github.com/repos/PixelGuys/Cubyz/tags?per_page=100" > tags.json
+            jq -r '.[].name' tags.json | grep -E '^(v)?[0-9]+\.[0-9]+\.[0-9]+' | sed 's/^v//' | sort -Vr > all.txt || true
+            TOP="$(head -n1 all.txt || true)"
+            if [ "$TOP" = "$NUM" ]; then
+              echo "is_latest=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "is_latest=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "has_version=false" >> "$GITHUB_OUTPUT"
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Assemble tag list (only non-prefixed)
+        id: tags
+        run: |
+          set -euo pipefail
+          {
+            # Include metadata-action computed tags (branches/PRs, etc.)
+            echo "${{ steps.meta.outputs.tags }}" | sed '/^$/d'
+            # Add normalized release tags when applicable
+            if [ "${{ steps.tagvars.outputs.has_version }}" = "true" ]; then
+              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tagvars.outputs.version }}"
+              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tagvars.outputs.major_minor }}"
+              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tagvars.outputs.major }}"
+              if [ "${{ steps.tagvars.outputs.is_latest }}" = "true" ]; then
+                echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+              fi
+            fi
+          } | awk 'NF' | sort -u > tag_list.txt
+          cat tag_list.txt
+          echo "TAG_LIST<<EOF" >> $GITHUB_ENV
+          cat tag_list.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -58,7 +128,10 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ env.TAG_LIST }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GIT_REPO=https://github.com/PixelGuys/Cubyz
+            GIT_BRANCH=${{ steps.upstream.outputs.upstream_ref }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

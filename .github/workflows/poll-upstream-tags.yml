@@ -1,0 +1,95 @@
+name: Poll Upstream Cubyz Tags
+
+on:
+  schedule:
+    - cron: '0 * * * *' # hourly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: poll-upstream-tags
+  cancel-in-progress: true
+
+jobs:
+  poll-and-dispatch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      UPSTREAM_OWNER: PixelGuys
+      UPSTREAM_REPO: Cubyz
+      TARGET_REPOSITORY: ${{ github.repository }}
+      MAX_MISSING: 5
+    steps:
+      - name: Fetch latest upstream tags
+        run: |
+          set -euo pipefail
+          curl -sS "https://api.github.com/repos/${UPSTREAM_OWNER}/${UPSTREAM_REPO}/tags?per_page=100" > upstream_tags.json
+          # Build pairs of (original_tag normalized_tag) and a normalized-only list
+          jq -r '.[].name' upstream_tags.json | grep -E '^(v)?[0-9]+\.[0-9]+\.[0-9]+' | while read -r t; do
+            n="${t#v}"
+            echo "$t $n"
+          done | sort -k2,2 -rV -u > upstream_pairs.txt || true
+          awk '{print $2}' upstream_pairs.txt | sort -rV -u > upstream_norm.txt || true
+          echo "Upstream tags (original -> normalized):"
+          cat upstream_pairs.txt || true
+
+      - name: Get existing image tags from GHCR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Query GitHub Packages API for container versions/tags. If package doesn't exist yet, return empty list.
+          if ! gh api -H "Accept: application/vnd.github+json" \
+            "/users/${{ github.repository_owner }}/packages/container/cubyz-server-docker/versions?per_page=100" \
+            > pkg_versions.json 2>/dev/null; then
+            echo "[]" > pkg_versions.json
+          fi
+          jq -r '.[] | .metadata.container.tags[]?' pkg_versions.json | sort -rV -u > existing_tags.txt || true
+          echo "Existing GHCR tags:"
+          cat existing_tags.txt || true
+
+      - name: Compute missing tags
+        id: diff
+        run: |
+          set -euo pipefail
+          touch upstream_norm.txt existing_tags.txt upstream_pairs.txt
+          # Normalized tags present upstream but not yet in GHCR
+          comm -23 <(sort -u upstream_norm.txt) <(sort -u existing_tags.txt) > missing_norm.txt || true
+          COUNT=$(wc -l < missing_norm.txt | tr -d ' ')
+          echo "Missing normalized tags count: $COUNT"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          # Join back to original tags, keep newest-first (version sort descending by normalized field)
+          # Result format: "ORIG NORM"
+          if [ -s missing_norm.txt ]; then
+            awk 'NR==FNR{miss[$0]=1;next} ($2 in miss){print $0}' missing_norm.txt upstream_pairs.txt | sort -k2,2 -rV > missing_pairs.txt
+          else
+            : > missing_pairs.txt
+          fi
+          echo "Missing tags to dispatch (orig -> norm, newest first):"
+          cat missing_pairs.txt || true
+          # Limit to newest MAX_MISSING tags to avoid backlog stampede
+          head -n "$MAX_MISSING" missing_pairs.txt > missing_limited_pairs.txt || true
+          LN=$(wc -l < missing_limited_pairs.txt | tr -d ' ')
+          echo "limited_count=$LN" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch builds for missing tags
+        if: ${{ steps.diff.outputs.limited_count != '0' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Dispatch newest-first to get the latest release built earlier
+          while read -r ORIG NORM; do
+            [ -z "$ORIG" ] && continue
+            echo "Dispatching build for $ORIG (normalized: $NORM) to ${TARGET_REPOSITORY}"
+            curl -sS -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              "https://api.github.com/repos/${TARGET_REPOSITORY}/dispatches" \
+              -d "{\"event_type\":\"cubyz-release\",\"client_payload\":{\"tag\":\"${ORIG}\"}}"
+          done < missing_limited_pairs.txt

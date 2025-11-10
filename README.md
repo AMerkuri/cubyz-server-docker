@@ -94,6 +94,47 @@ services:
 
 - `47649/udp` - Game server port
 
+## Image Versioning
+
+Docker image tags track upstream Cubyz releases published at <https://github.com/PixelGuys/Cubyz/tags>. Upstream tags use plain semantic versioning (`0.0.1`). For any upstream release, a multi-architecture image (`linux/amd64`, `linux/arm64`) is built and pushed.
+
+### Picking a Tag
+
+For reproducible deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades.
+
+```bash
+# Exact version (recommended for stability)
+docker run ghcr.io/amerkuri/cubyz-server-docker:0.0.1
+
+# Latest released version
+docker run ghcr.io/amerkuri/cubyz-server-docker:latest
+```
+
+Compose example with a pinned version:
+
+```yaml
+services:
+  cubyz:
+    image: ghcr.io/amerkuri/cubyz-server-docker:0.0.1
+    network_mode: host
+    volumes:
+      - ./saves:/cubyz/saves
+    environment:
+      - CUBYZ_WORLD_NAME=myworld
+    restart: unless-stopped
+```
+
+### Upgrading
+
+1. Review available tags (GitHub packages UI or: `crane ls ghcr.io/amerkuri/cubyz-server-docker`).
+2. Update the tag in your deployment (e.g. bump `0.0.1` to `0.0.2`).
+3. Pull & recreate containers:
+
+```bash
+docker pull ghcr.io/amerkuri/cubyz-server-docker:0.0.2
+docker compose up -d --pull always --force-recreate
+```
+
 ## Building Locally
 
 ```bash
