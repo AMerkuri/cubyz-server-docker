@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   packages: read
+  actions: write
 
 concurrency:
   group: poll-upstream-tags
@@ -19,6 +20,7 @@ jobs:
     permissions:
       contents: read
       packages: read
+      actions: write
     env:
       UPSTREAM_OWNER: PixelGuys
       UPSTREAM_REPO: Cubyz
