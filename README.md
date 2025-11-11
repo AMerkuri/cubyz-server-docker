@@ -53,10 +53,11 @@ Docker image tags track upstream Cubyz releases published at <https://github.com
 
 - `X.Y.Z` – Exact version (e.g., `0.0.1`).
 - `latest` – Most recent upstream release.
+- `main` - Contains latest changes from `main` branch, only used for testing.
 
 ### Picking a Tag
 
-For reproducible deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades.
+For stable deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades.
 
 ```bash
 # Exact version
@@ -79,6 +80,8 @@ services:
       - CUBYZ_WORLD_NAME=world
     restart: unless-stopped
 ```
+
+> **Note**: Image tag versions below `0.1.0` do not support headless server, therefore it will not run! Use `latest` tag instead.
 
 ### Upgrading
 
