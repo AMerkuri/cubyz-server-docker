@@ -9,10 +9,11 @@ Docker container for running Cubyz headless server with multi-architecture suppo
 ```bash
 docker run -d \
   -p 47649:47649/udp \
-  -v cubyz-saves:/cubyz/saves \
-  -e CUBYZ_WORLD_NAME=myworld \
+  -v ./saves:/cubyz/saves \
+  -e CUBYZ_WORLD_NAME=world \
   ghcr.io/amerkuri/cubyz-server-docker:latest
 ```
+> **Note**: Make sure mapped directory or volume `./saves` already contains existing world data `world`!
 
 ### Using Docker Compose
 
@@ -27,7 +28,7 @@ services:
     volumes:
       - ./saves:/cubyz/saves
     environment:
-      - CUBYZ_WORLD_NAME=myworld
+      - CUBYZ_WORLD_NAME=world
     restart: unless-stopped
 ```
 
@@ -44,6 +45,66 @@ docker compose logs -f
 
 # Stop server
 docker compose down
+```
+
+## Image Versioning
+
+Docker image tags track upstream Cubyz releases published at <https://github.com/PixelGuys/Cubyz/tags>. Upstream tags use plain semantic versioning (`0.0.1`). For any upstream release, a multi-architecture image (`linux/amd64`, `linux/arm64`) is built and pushed:
+
+- `X.Y.Z` – Exact version (e.g., `0.0.1`).
+- `latest` – Most recent upstream release.
+
+### Picking a Tag
+
+For reproducible deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades.
+
+```bash
+# Exact version
+docker run ghcr.io/amerkuri/cubyz-server-docker:0.0.1
+
+# Latest released version
+docker run ghcr.io/amerkuri/cubyz-server-docker:latest
+```
+
+Compose example with a pinned version:
+
+```yaml
+services:
+  cubyz:
+    image: ghcr.io/amerkuri/cubyz-server-docker:0.0.1
+    network_mode: host
+    volumes:
+      - ./saves:/cubyz/saves
+    environment:
+      - CUBYZ_WORLD_NAME=world
+    restart: unless-stopped
+```
+
+### Upgrading
+
+1. Review available tags ([GitHub packages UI](https://github.com/AMerkuri/cubyz-server-docker/pkgs/container/cubyz-server-docker) or: `crane ls ghcr.io/amerkuri/cubyz-server-docker`).
+2. Update the tag in your deployment (e.g. bump `0.0.1` to `0.0.2`).
+3. Pull & recreate containers:
+
+```bash
+docker pull ghcr.io/amerkuri/cubyz-server-docker:0.0.2
+docker compose up -d --pull always --force-recreate
+```
+
+## Building Locally
+
+```bash
+# Build for your architecture
+npm run build
+
+# Or with Docker Compose
+docker compose build --no-cache
+
+# Build multi-arch manually
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t cubyz-server:local \
+  .
 ```
 
 ## Configuration
@@ -94,68 +155,6 @@ services:
 ### Ports
 
 - `47649/udp` - Game server port
-
-## Image Versioning
-
-Docker image tags track upstream Cubyz releases published at <https://github.com/PixelGuys/Cubyz/tags>. Upstream tags use plain semantic versioning (`0.0.1`). For any upstream release, a multi-architecture image (`linux/amd64`, `linux/arm64`) is built and pushed:
-
-- `X.Y.Z` – Exact version (e.g., `0.0.1`).
-- `latest` – Most recent upstream release.
-
-To see all available images, visit: <https://github.com/AMerkuri/cubyz-server-docker/pkgs/container/cubyz-server-docker>
-
-### Picking a Tag
-
-For reproducible deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades.
-
-```bash
-# Exact version (recommended for stability)
-docker run ghcr.io/amerkuri/cubyz-server-docker:0.0.1
-
-# Latest released version
-docker run ghcr.io/amerkuri/cubyz-server-docker:latest
-```
-
-Compose example with a pinned version:
-
-```yaml
-services:
-  cubyz:
-    image: ghcr.io/amerkuri/cubyz-server-docker:0.0.1
-    network_mode: host
-    volumes:
-      - ./saves:/cubyz/saves
-    environment:
-      - CUBYZ_WORLD_NAME=myworld
-    restart: unless-stopped
-```
-
-### Upgrading
-
-1. Review available tags (GitHub packages UI or: `crane ls ghcr.io/amerkuri/cubyz-server-docker`).
-2. Update the tag in your deployment (e.g. bump `0.0.1` to `0.0.2`).
-3. Pull & recreate containers:
-
-```bash
-docker pull ghcr.io/amerkuri/cubyz-server-docker:0.0.2
-docker compose up -d --pull always --force-recreate
-```
-
-## Building Locally
-
-```bash
-# Build for your architecture
-npm run build
-
-# Or with Docker Compose
-docker compose build --no-cache
-
-# Build multi-arch manually
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  -t cubyz-server:local \
-  .
-```
 
 ## Troubleshooting
 
