@@ -23,6 +23,7 @@ services:
       # Server configuration via environment variables
       CUBYZ_WORLD_NAME: world
     restart: unless-stopped
+    stop_grace_period: 30s
     # Resource limits (optional, adjust as needed)
     deploy:
       resources:
