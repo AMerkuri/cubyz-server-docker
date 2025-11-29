@@ -66,6 +66,16 @@ Docker image tags track upstream Cubyz releases published at <https://github.com
 | Upstream tag detected (polling) | `v1.0.0` | ✅ Yes | `1.0.0`, `latest` |
 | Upstream master changes (polling) | `master` | ❌ No | `dev` |
 
+#### Automatic Upstream Polling
+
+A GitHub Actions workflow runs **every hour** to check for upstream changes:
+
+1. **New tags** – Compares upstream [Cubyz tags](https://github.com/PixelGuys/Cubyz/tags) against existing GHCR image tags. Any missing version triggers a release build.
+
+2. **Master branch commits** – Compares the latest upstream `master` commit SHA against the last built SHA. If different, triggers a `dev` build. The SHA is tracked via a `.last-dev-sha` file committed to this repository.
+
+This ensures Docker images stay in sync with upstream.
+
 ### Picking a Tag
 
 For stable deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades. Use `dev` to test bleeding-edge changes from upstream master (not recommended for production).
