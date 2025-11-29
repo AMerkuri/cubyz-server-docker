@@ -9,7 +9,7 @@ ARG GIT_REPO=https://github.com/PixelGuys/Cubyz
 ARG GIT_BRANCH=master
 
 # Install build dependencies
-RUN apk add --no-cache bash build-base linux-headers wget xz tar ca-certificates git \
+RUN apk add --no-cache bash build-base linux-headers wget xz tar ca-certificates git curl \
     && update-ca-certificates
 
 # Set working directory
