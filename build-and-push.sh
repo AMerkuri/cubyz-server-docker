@@ -43,6 +43,7 @@ docker buildx build \
     --platform ${PLATFORMS} \
     --tag ${REGISTRY}/${IMAGE_NAME}:${TAG} \
     --tag ${REGISTRY}/${IMAGE_NAME}:latest \
+    --no-cache \
     --push \
     .
 
