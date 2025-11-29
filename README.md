@@ -193,3 +193,6 @@ services:
 
 - **Unknown connection from address: 192.168.x.x:30287**
     Use host networking mode `--network host` in Docker to avoid NAT issues
+
+- **GLFW Error(65544): X11: Failed to load Xlib**  
+    For < 0.1.0 versions headless server is not supported. Use `latest` or `dev` tag instead. 
