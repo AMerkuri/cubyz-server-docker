@@ -6,9 +6,15 @@ on:
       - main
     tags:
       - 'v*'
+    paths-ignore:
+      - '.last-dev-sha'
+      - 'README.md'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '.last-dev-sha'
+      - 'README.md'
   workflow_dispatch:
   repository_dispatch:
     types: [cubyz-release]
