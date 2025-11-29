@@ -27,6 +27,48 @@ jobs:
       TARGET_REPOSITORY: ${{ github.repository }}
       MAX_MISSING: 5
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check master branch for changes (dev build)
+        id: check_master
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          
+          # Get latest commit SHA from upstream master
+          UPSTREAM_SHA=$(curl -sS "https://api.github.com/repos/${UPSTREAM_OWNER}/${UPSTREAM_REPO}/commits/master" | jq -r '.sha')
+          echo "Upstream master SHA: $UPSTREAM_SHA"
+          
+          # Get the SHA we last built (stored in a file or check the dev image label)
+          # We'll use a simple approach: check if dev image exists and compare
+          LAST_SHA=""
+          if gh api -H "Accept: application/vnd.github+json" \
+            "/users/${{ github.repository_owner }}/packages/container/cubyz-server-docker/versions?per_page=100" \
+            > pkg_versions_dev.json 2>/dev/null; then
+            # Check if dev tag exists
+            DEV_EXISTS=$(jq -r '.[] | select(.metadata.container.tags[]? == "dev") | .id' pkg_versions_dev.json | head -n1 || true)
+            if [ -n "$DEV_EXISTS" ]; then
+              echo "Dev image exists"
+              # Try to get the last built SHA from our tracking file
+              if [ -f .last-dev-sha ]; then
+                LAST_SHA=$(cat .last-dev-sha)
+              fi
+            fi
+          fi
+          
+          echo "Last built SHA: ${LAST_SHA:-none}"
+          
+          if [ "$UPSTREAM_SHA" != "$LAST_SHA" ]; then
+            echo "needs_dev_build=true" >> "$GITHUB_OUTPUT"
+            echo "upstream_sha=$UPSTREAM_SHA" >> "$GITHUB_OUTPUT"
+            echo "Master branch has new commits, dev build needed"
+          else
+            echo "needs_dev_build=false" >> "$GITHUB_OUTPUT"
+            echo "No new commits on master, skipping dev build"
+          fi
+
       - name: Fetch latest upstream tags
         run: |
           set -euo pipefail
@@ -79,6 +121,30 @@ jobs:
           LN=$(wc -l < missing_limited_pairs.txt | tr -d ' ')
           echo "limited_count=$LN" >> "$GITHUB_OUTPUT"
 
+      - name: Dispatch dev build for master branch
+        if: ${{ steps.check_master.outputs.needs_dev_build == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Dispatching dev build for master branch to ${TARGET_REPOSITORY}"
+          if curl -sSf -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            "https://api.github.com/repos/${TARGET_REPOSITORY}/dispatches" \
+            -d '{"event_type":"cubyz-release","client_payload":{"tag":"master","is_dev":true}}'
+          then
+            # Store the SHA we're building
+            echo "${{ steps.check_master.outputs.upstream_sha }}" > .last-dev-sha
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .last-dev-sha
+            git commit -m "Update last dev build SHA" || true
+            git push || true
+          else
+            echo "Failed to dispatch dev build" >&2
+          fi
+
       - name: Dispatch builds for missing tags
         if: ${{ steps.diff.outputs.limited_count != '0' }}
         env:
@@ -93,7 +159,7 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${GITHUB_TOKEN}" \
               "https://api.github.com/repos/${TARGET_REPOSITORY}/dispatches" \
-              -d "{\"event_type\":\"cubyz-release\",\"client_payload\":{\"tag\":\"${ORIG}\"}}"
+              -d "{\"event_type\":\"cubyz-release\",\"client_payload\":{\"tag\":\"${ORIG}\",\"is_dev\":false}}"
             then
               echo "Failed to dispatch for $ORIG" >&2
             fi

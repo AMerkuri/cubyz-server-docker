@@ -51,20 +51,34 @@ docker compose down
 
 Docker image tags track upstream Cubyz releases published at <https://github.com/PixelGuys/Cubyz/tags>. Upstream tags use plain semantic versioning (`0.0.1`). For any upstream release, a multi-architecture image (`linux/amd64`, `linux/arm64`) is built and pushed:
 
-- `X.Y.Z` – Exact version (e.g., `0.0.1`).
-- `latest` – Most recent upstream release.
-- `main` - Contains latest changes from `main` branch, only used for testing.
+- `X.Y.Z` – Exact version (e.g., `0.1.0`), built with release optimizations.
+- `latest` – Most recent upstream release, built with release optimizations.
+- `dev` – Latest upstream `master` branch, built **without** release optimizations (for testing bleeding-edge changes).
+- `main` – Built from this repository's `main` branch (for CI/testing purposes only).
+
+### Build Triggers
+
+| Trigger | Upstream Ref | Release Build | Image Tags |
+|---------|--------------|---------------|------------|
+| Push to `main` branch | `master` | ✅ Yes | `main` |
+| Pull request to `main` | `master` | ✅ Yes | `pr-X` |
+| Tag push (e.g., `v1.0.0`) | `v1.0.0` | ✅ Yes | `1.0.0`, `latest` |
+| Upstream tag detected (polling) | `v1.0.0` | ✅ Yes | `1.0.0`, `latest` |
+| Upstream master changes (polling) | `master` | ❌ No | `dev` |
 
 ### Picking a Tag
 
-For stable deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades.
+For stable deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades. Use `dev` to test bleeding-edge changes from upstream master (not recommended for production).
 
 ```bash
-# Exact version
-docker run ghcr.io/amerkuri/cubyz-server-docker:0.0.1
+# Exact version (recommended for production)
+docker run ghcr.io/amerkuri/cubyz-server-docker:0.1.0
 
 # Latest released version
 docker run ghcr.io/amerkuri/cubyz-server-docker:latest
+
+# Development build (bleeding-edge, no release optimizations)
+docker run ghcr.io/amerkuri/cubyz-server-docker:dev
 ```
 
 Compose example with a pinned version:
@@ -121,7 +135,7 @@ docker buildx build \
 You can customize the build process using these arguments:
 
 - `GIT_REPO` - Cubyz repository URL (default: `https://github.com/PixelGuys/Cubyz`)
-- `GIT_BRANCH` - Git branch to build from (default: `master`)
+- `GIT_REF` - Git reference to build from: branch, tag, or commit SHA (default: `master`)
 - `USER_UID` - User ID for the cubyz user (default: `1000`)
 - `USER_GID` - Group ID for the cubyz group (default: `1000`)
 
@@ -130,7 +144,7 @@ Example with custom build args:
 ```bash
 docker build \
   --build-arg GIT_REPO=https://github.com/your-fork/Cubyz.git \
-  --build-arg GIT_BRANCH=custom-branch \
+  --build-arg GIT_REF=v0.1.0 \
   --build-arg USER_UID=100 \
   --build-arg USER_GID=101 \
   -t cubyz-server:custom \
@@ -146,7 +160,7 @@ services:
       context: .
       args:
         - GIT_REPO=https://github.com/your-fork/Cubyz.git
-        - GIT_BRANCH=custom-branch
+        - GIT_REF=v0.1.0
         - USER_UID=1001
         - USER_GID=1001
 ```

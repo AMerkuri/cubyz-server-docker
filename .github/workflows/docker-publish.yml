@@ -55,19 +55,29 @@ jobs:
         id: upstream
         env:
           CLIENT_TAG: ${{ github.event.client_payload.tag }}
+          CLIENT_IS_DEV: ${{ github.event.client_payload.is_dev }}
         run: |
           set -euo pipefail
           REF=""
+          IS_DEV="false"
           if [ -n "${CLIENT_TAG:-}" ]; then
+            # Triggered by repository_dispatch (polling workflow)
             REF="${CLIENT_TAG}"
+            if [ "${CLIENT_IS_DEV:-}" = "true" ]; then
+              IS_DEV="true"
+            fi
           elif [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            # Triggered by tag push
             REF="${GITHUB_REF_NAME}"
           else
+            # Triggered by branch push (main) or PR - use master but NOT as dev build
             REF="master"
+            IS_DEV="false"
           fi
           echo "UPSTREAM_REF=${REF}" >> "$GITHUB_ENV"
           echo "upstream_ref=${REF}" >> "$GITHUB_OUTPUT"
-          echo "Using UPSTREAM_REF=${REF}"
+          echo "is_dev=${IS_DEV}" >> "$GITHUB_OUTPUT"
+          echo "Using UPSTREAM_REF=${REF}, IS_DEV=${IS_DEV}"
 
       - name: Compute release tag variants and latest eligibility
         id: tagvars
@@ -104,6 +114,10 @@ jobs:
           {
             # Include metadata-action computed tags (branches/PRs, etc.)
             echo "${{ steps.meta.outputs.tags }}" | sed '/^$/d'
+            # Add dev tag for dev builds
+            if [ "${{ steps.upstream.outputs.is_dev }}" = "true" ]; then
+              echo "${{ env.REGISTRY }}/${REPO_LC}:dev"
+            fi
             # Add normalized release tags when applicable
             if [ "${{ steps.tagvars.outputs.has_version }}" = "true" ]; then
               # Always push exact version
@@ -130,6 +144,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             GIT_REPO=https://github.com/PixelGuys/Cubyz
-            GIT_BRANCH=${{ steps.upstream.outputs.upstream_ref }}
+            GIT_REF=${{ steps.upstream.outputs.upstream_ref }}
+            RELEASE_BUILD=${{ steps.upstream.outputs.is_dev == 'true' && 'false' || 'true' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

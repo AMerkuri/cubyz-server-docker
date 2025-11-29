@@ -7,10 +7,11 @@ services:
       dockerfile: Dockerfile
       # Uncomment and set build arguments as needed
       # args:
-      #   - GIT_REPO=https://github.com/PixelGuys/Cubyz
-      #   - GIT_BRANCH=master
-      #   - USER_UID=1000
-      #   - USER_GID=1000
+        # - GIT_REPO=https://github.com/PixelGuys/Cubyz
+        # - GIT_REF=0.0.1
+        # - USER_UID=1000
+        # - USER_GID=1000
+        # - RELEASE_BUILD=false
     container_name: cubyz-server
     ports:
       - "47649:47649/udp"

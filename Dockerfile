@@ -6,7 +6,8 @@ FROM alpine:3.20 AS builder
 
 # Build arguments for repository configuration
 ARG GIT_REPO=https://github.com/PixelGuys/Cubyz
-ARG GIT_BRANCH=master
+ARG GIT_REF=master
+ARG RELEASE_BUILD=true
 
 # Install build dependencies
 RUN apk add --no-cache bash build-base linux-headers wget xz tar ca-certificates git curl \
@@ -15,8 +16,8 @@ RUN apk add --no-cache bash build-base linux-headers wget xz tar ca-certificates
 # Set working directory
 WORKDIR /build
 
-# Clone repository
-RUN git clone --depth 1 --branch ${GIT_BRANCH} ${GIT_REPO} . && \
+# Clone repository (GIT_REF can be a branch, tag, or commit)
+RUN git clone --depth 1 --branch ${GIT_REF} ${GIT_REPO} . && \
     ls -la
 
 # Download and install Zig compiler
@@ -25,12 +26,13 @@ RUN ./scripts/install_compiler_linux.sh
 # Build the server in release mode for Alpine (musl libc)
 RUN ARCH=$(uname -m) && \
     echo "Building for native architecture: $ARCH with musl libc" && \
+    echo "Release build: ${RELEASE_BUILD}" && \
     # Retry the build up to 3 times if it fails due to network issues
     for i in 1 2 3; do \
     ./compiler/zig/zig build \
     -Dtarget=${ARCH}-linux-musl \
     -Doptimize=ReleaseFast \
-    -Drelease=true \
+    $([ "${RELEASE_BUILD}" = "true" ] && echo "-Drelease=true") \
     -Dcpu=baseline && break || \
     (echo "Build attempt $i failed, retrying..." && sleep 5); \
     done
