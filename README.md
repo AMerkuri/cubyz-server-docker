@@ -51,9 +51,9 @@ docker compose down
 
 Docker image tags track upstream Cubyz releases published at <https://github.com/PixelGuys/Cubyz/tags>. Upstream tags use plain semantic versioning (`0.0.1`). For any upstream release, a multi-architecture image (`linux/amd64`, `linux/arm64`) is built and pushed:
 
-- `X.Y.Z` – Exact version (e.g., `0.1.0`), built with release optimizations.
-- `latest` – Most recent upstream release, built with release optimizations.
-- `dev` – Latest upstream `master` branch, built **without** release optimizations (for testing bleeding-edge changes).
+- `X.Y.Z` – Exact version (e.g., `0.1.0`), built with `-Drelease=true`.
+- `latest` – Most recent upstream release, built with `-Drelease=true`.
+- `dev` – Latest upstream `master` branch, built **without** `-Drelease=true` (for testing bleeding-edge changes).
 - `main` – Built from this repository's `main` branch (for CI/testing purposes only).
 
 ### Build Triggers
@@ -77,7 +77,7 @@ docker run ghcr.io/amerkuri/cubyz-server-docker:0.1.0
 # Latest released version
 docker run ghcr.io/amerkuri/cubyz-server-docker:latest
 
-# Development build (bleeding-edge, no release optimizations)
+# Development build (latest upstream master)
 docker run ghcr.io/amerkuri/cubyz-server-docker:dev
 ```
 
