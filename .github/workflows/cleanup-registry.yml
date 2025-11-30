@@ -1,0 +1,29 @@
+# Cleans up untagged/dangling images from GHCR.
+name: Cleanup Registry Images
+
+on:
+  schedule:
+    - cron: '30 2 * * *' # daily at 02:30 UTC
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+concurrency:
+  group: cleanup-registry
+  cancel-in-progress: true
+
+jobs:
+  cleanup-untagged-images:
+    name: Cleanup Untagged Images
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Delete untagged images
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          delete-untagged: true
+          delete-ghost-images: true
+          delete-partial-images: true
+          delete-orphaned-images: true
