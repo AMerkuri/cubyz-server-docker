@@ -119,7 +119,10 @@ jobs:
           REPO_LC="${REPO,,}"
           {
             # Include metadata-action computed tags (branches/PRs, etc.)
-            echo "${{ steps.meta.outputs.tags }}" | sed '/^$/d'
+            # BUT exclude them for repository_dispatch to avoid tagging dev builds as 'main'
+            if [ "${{ github.event_name }}" != "repository_dispatch" ]; then
+              echo "${{ steps.meta.outputs.tags }}" | sed '/^$/d'
+            fi
             # Add dev tag for dev builds
             if [ "${{ steps.upstream.outputs.is_dev }}" = "true" ]; then
               echo "${{ env.REGISTRY }}/${REPO_LC}:dev"
