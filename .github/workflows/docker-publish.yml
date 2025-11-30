@@ -24,28 +24,20 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
+  # Prepare build metadata (runs once, shared by all builds)
+  prepare:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
+    outputs:
+      upstream_ref: ${{ steps.upstream.outputs.upstream_ref }}
+      is_dev: ${{ steps.upstream.outputs.is_dev }}
+      has_version: ${{ steps.tagvars.outputs.has_version }}
+      version: ${{ steps.tagvars.outputs.version }}
+      is_latest: ${{ steps.tagvars.outputs.is_latest }}
+      tags: ${{ steps.tags.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels)
         id: meta
@@ -55,7 +47,6 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            # Release-driven tags are added via TAG_LIST assembly step below
 
       - name: Determine upstream ref (tag/branch)
         id: upstream
@@ -67,20 +58,16 @@ jobs:
           REF=""
           IS_DEV="false"
           if [ -n "${CLIENT_TAG:-}" ]; then
-            # Triggered by repository_dispatch (polling workflow)
             REF="${CLIENT_TAG}"
             if [ "${CLIENT_IS_DEV:-}" = "true" ]; then
               IS_DEV="true"
             fi
           elif [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
-            # Triggered by tag push
             REF="${GITHUB_REF_NAME}"
           else
-            # Triggered by branch push (main) or PR - use master but NOT as dev build
             REF="master"
             IS_DEV="false"
           fi
-          echo "UPSTREAM_REF=${REF}" >> "$GITHUB_ENV"
           echo "upstream_ref=${REF}" >> "$GITHUB_OUTPUT"
           echo "is_dev=${IS_DEV}" >> "$GITHUB_OUTPUT"
           echo "Using UPSTREAM_REF=${REF}, IS_DEV=${IS_DEV}"
@@ -97,7 +84,6 @@ jobs:
           if [[ "$NUM" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "has_version=true" >> "$GITHUB_OUTPUT"
             echo "version=$NUM" >> "$GITHUB_OUTPUT"
-            # Determine if this is the latest upstream release
             curl -sSf "https://api.github.com/repos/PixelGuys/Cubyz/tags?per_page=100" > tags.json || { echo 'is_latest=false' >> "$GITHUB_OUTPUT"; exit 0; }
             jq -r '.[].name' tags.json | grep -E '^(v)?[0-9]+\.[0-9]+\.[0-9]+' | sed 's/^v//' | sort -Vr > all.txt || true
             TOP="$(head -n1 all.txt || true)"
@@ -111,49 +97,154 @@ jobs:
             echo "is_latest=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Assemble tag list (only non-prefixed)
+      - name: Assemble tag list
         id: tags
+        env:
+          META_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           set -euo pipefail
           REPO="${{ env.IMAGE_NAME }}"
           REPO_LC="${REPO,,}"
           {
-            # Include metadata-action computed tags (branches/PRs, etc.)
-            # BUT exclude them for repository_dispatch to avoid tagging dev builds as 'main'
+            # Include metadata-action tags only for non-dispatch events
             if [ "${{ github.event_name }}" != "repository_dispatch" ]; then
-              echo "${{ steps.meta.outputs.tags }}" | sed '/^$/d'
+              echo "$META_TAGS" | sed '/^$/d'
             fi
             # Add dev tag for dev builds
             if [ "${{ steps.upstream.outputs.is_dev }}" = "true" ]; then
               echo "${{ env.REGISTRY }}/${REPO_LC}:dev"
             fi
-            # Add normalized release tags when applicable
+            # Add version tags when applicable
             if [ "${{ steps.tagvars.outputs.has_version }}" = "true" ]; then
-              # Always push exact version
               echo "${{ env.REGISTRY }}/${REPO_LC}:${{ steps.tagvars.outputs.version }}"
-              
-              # Push latest tag if this IS the latest upstream release
               if [ "${{ steps.tagvars.outputs.is_latest }}" = "true" ]; then
                 echo "${{ env.REGISTRY }}/${REPO_LC}:latest"
               fi
             fi
           } | awk 'NF' | sort -u > tag_list.txt
           cat tag_list.txt
-          echo "TAG_LIST<<EOF" >> $GITHUB_ENV
-          cat tag_list.txt >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          # Output as JSON array for matrix consumption
+          TAGS_JSON=$(jq -R -s -c 'split("\n") | map(select(length > 0))' tag_list.txt)
+          echo "tags=${TAGS_JSON}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push Docker image
+  # Build images for each platform using native runners
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare image name
+        id: image
+        run: |
+          echo "name=${IMAGE_NAME,,}" >> "$GITHUB_OUTPUT"
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ env.TAG_LIST }}
-          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ matrix.platform }}
+          labels: ${{ needs.prepare.outputs.labels }}
           build-args: |
             GIT_REPO=https://github.com/PixelGuys/Cubyz
-            GIT_REF=${{ steps.upstream.outputs.upstream_ref }}
-            RELEASE_BUILD=${{ steps.upstream.outputs.is_dev == 'true' && 'false' || 'true' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            GIT_REF=${{ needs.prepare.outputs.upstream_ref }}
+            RELEASE_BUILD=${{ needs.prepare.outputs.is_dev == 'true' && 'false' || 'true' }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Merge platform images into multi-arch manifest
+  merge:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        env:
+          TAGS_JSON: ${{ needs.prepare.outputs.tags }}
+        run: |
+          set -euo pipefail
+          REPO="${{ env.IMAGE_NAME }}"
+          REPO_LC="${REPO,,}"
+          
+          # Build tag arguments for docker buildx imagetools create
+          TAG_ARGS=$(echo "$TAGS_JSON" | jq -r '.[] | "-t " + .' | tr '\n' ' ')
+          
+          # Build source arguments from digest files (filenames are the digest hashes)
+          SOURCE_ARGS=""
+          for digest in *; do
+            SOURCE_ARGS="$SOURCE_ARGS ${{ env.REGISTRY }}/${REPO_LC}@sha256:${digest}"
+          done
+          
+          # Create and push multi-arch manifest
+          docker buildx imagetools create $TAG_ARGS $SOURCE_ARGS
+
+      - name: Inspect image
+        env:
+          TAGS_JSON: ${{ needs.prepare.outputs.tags }}
+        run: |
+          FIRST_TAG=$(echo "$TAGS_JSON" | jq -r '.[0] // empty')
+          if [ -z "$FIRST_TAG" ]; then
+            echo "No tags found to inspect"
+            exit 1
+          fi
+          docker buildx imagetools inspect "$FIRST_TAG"
