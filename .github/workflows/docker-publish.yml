@@ -232,9 +232,14 @@ jobs:
           # Build tag arguments for docker buildx imagetools create
           TAG_ARGS=$(echo "$TAGS_JSON" | jq -r '.[] | "-t " + .' | tr '\n' ' ')
           
+          # Build source arguments from digest files (filenames are the digest hashes)
+          SOURCE_ARGS=""
+          for digest in $(ls -1); do
+            SOURCE_ARGS="$SOURCE_ARGS ${{ env.REGISTRY }}/${REPO_LC}@sha256:${digest}"
+          done
+          
           # Create and push multi-arch manifest
-          docker buildx imagetools create $TAG_ARGS \
-            $(printf '${{ env.REGISTRY }}/%s@sha256:%s ' "$REPO_LC" $(ls -1))
+          docker buildx imagetools create $TAG_ARGS $SOURCE_ARGS
 
       - name: Inspect image
         env:
