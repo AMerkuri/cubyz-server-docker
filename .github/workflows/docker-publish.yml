@@ -122,7 +122,19 @@ jobs:
               fi
             fi
           } | awk 'NF' | sort -u > tag_list.txt
+          echo "=== Build Configuration ==="
+          echo "Upstream ref: ${{ steps.upstream.outputs.upstream_ref }}"
+          echo "Is dev build: ${{ steps.upstream.outputs.is_dev }}"
+          echo "Has version: ${{ steps.tagvars.outputs.has_version }}"
+          if [ "${{ steps.tagvars.outputs.has_version }}" = "true" ]; then
+            echo "Version: ${{ steps.tagvars.outputs.version }}"
+            echo "Is latest: ${{ steps.tagvars.outputs.is_latest }}"
+          fi
+          echo "Release build: ${{ steps.upstream.outputs.is_dev == 'true' && 'false' || 'true' }}"
+          echo ""
+          echo "=== Image Tags ==="
           cat tag_list.txt
+          echo ""
           # Output as JSON array for matrix consumption
           TAGS_JSON=$(jq -R -s -c 'split("\n") | map(select(length > 0))' tag_list.txt)
           echo "tags=${TAGS_JSON}" >> "$GITHUB_OUTPUT"

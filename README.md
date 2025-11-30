@@ -11,7 +11,7 @@ docker run -d \
   -p 47649:47649/udp \
   -v ./saves:/cubyz/saves \
   -e CUBYZ_WORLD_NAME=world \
-  ghcr.io/amerkuri/cubyz-server-docker:latest
+  ghcr.io/amerkuri/cubyz-server-docker:dev
 ```
 > **Note**: Make sure mapped directory or volume `./saves` already contains existing world data `world`!
 
@@ -22,7 +22,7 @@ Create a `compose.yml` file:
 ```yaml
 services:
   cubyz:
-    image: ghcr.io/amerkuri/cubyz-server-docker:latest
+    image: ghcr.io/amerkuri/cubyz-server-docker:dev
     ports:
       - "47649:47649/udp"
     volumes:
@@ -105,7 +105,7 @@ services:
     restart: unless-stopped
 ```
 
-> **Note**: Image tag versions below `0.1.0` do not support headless server, therefore it will not run! Use `latest` tag instead.
+> **Note**: Image tag versions below `0.1.0` do not support headless server, therefore it will not run! Use `dev` tag instead.
 
 ### Upgrading
 
@@ -195,4 +195,4 @@ services:
     Use host networking mode `--network host` in Docker to avoid NAT issues
 
 - **GLFW Error(65544): X11: Failed to load Xlib**  
-    For < 0.1.0 versions headless server is not supported. Use `latest` or `dev` tag instead. 
+    For < 0.1.0 versions headless server is not supported. Use `dev` tag instead. 
