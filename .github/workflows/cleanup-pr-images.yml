@@ -18,4 +18,4 @@ jobs:
           image-names: ${{ github.event.repository.name }}
           image-tags: "pr-${{ github.event.pull_request.number }}"
           cut-off: 0s
-          tag-selection: both
+          tag-selection: tagged
