@@ -1,0 +1,21 @@
+name: Cleanup PR Images
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Delete PR image from GHCR
+        uses: snok/container-retention-policy@v3.0.0
+        with:
+          account: ${{ github.repository_owner }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          image-names: ${{ github.event.repository.name }}
+          image-tags: "pr-${{ github.event.pull_request.number }}"
+          cut-off: 0s
+          tag-selection: both
