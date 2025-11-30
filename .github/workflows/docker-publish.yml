@@ -124,7 +124,7 @@ jobs:
           } | awk 'NF' | sort -u > tag_list.txt
           cat tag_list.txt
           # Output as JSON array for matrix consumption
-          TAGS_JSON=$(cat tag_list.txt | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          TAGS_JSON=$(jq -R -s -c 'split("\n") | map(select(length > 0))' tag_list.txt)
           echo "tags=${TAGS_JSON}" >> "$GITHUB_OUTPUT"
 
   # Build images for each platform using native runners
@@ -142,9 +142,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    outputs:
-      digest-amd64: ${{ steps.build.outputs.digest }}
-      digest-arm64: ${{ steps.build.outputs.digest }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -234,7 +231,7 @@ jobs:
           
           # Build source arguments from digest files (filenames are the digest hashes)
           SOURCE_ARGS=""
-          for digest in $(ls -1); do
+          for digest in *; do
             SOURCE_ARGS="$SOURCE_ARGS ${{ env.REGISTRY }}/${REPO_LC}@sha256:${digest}"
           done
           
@@ -245,5 +242,9 @@ jobs:
         env:
           TAGS_JSON: ${{ needs.prepare.outputs.tags }}
         run: |
-          FIRST_TAG=$(echo "$TAGS_JSON" | jq -r '.[0]')
+          FIRST_TAG=$(echo "$TAGS_JSON" | jq -r '.[0] // empty')
+          if [ -z "$FIRST_TAG" ]; then
+            echo "No tags found to inspect"
+            exit 1
+          fi
           docker buildx imagetools inspect "$FIRST_TAG"
