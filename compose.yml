@@ -1,10 +1,10 @@
 services:
   cubyz-server:
     # Use pre-built image from GHCR or build locally
-    # image: ghcr.io/amerkuri/cubyz-server-docker:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/amerkuri/cubyz-server-docker:pr-4
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
       # Uncomment and set build arguments as needed
       # args:
         # - GIT_REPO=https://github.com/PixelGuys/Cubyz
@@ -29,10 +29,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 4G
+          cpus: '4'
+          memory: 10G
         reservations:
-          cpus: '1'
+          cpus: '2'
           memory: 2G
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f Cubyz && nc -uz -w1 127.0.0.1 47649 || exit 1"]
