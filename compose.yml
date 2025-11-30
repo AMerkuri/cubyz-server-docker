@@ -29,11 +29,11 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
           cpus: '2'
           memory: 4G
-        reservations:
-          cpus: '1'
-          memory: 2G
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f Cubyz && nc -uz -w1 127.0.0.1 47649 || exit 1"]
       interval: 30s
