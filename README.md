@@ -54,7 +54,7 @@ Docker image tags track upstream Cubyz releases published at <https://github.com
 - `X.Y.Z` – Exact version (e.g., `0.1.0`), built with `-Drelease=true`.
 - `latest` – Most recent upstream release, built with `-Drelease=true`.
 - `dev` – Latest upstream `master` branch, built **without** `-Drelease=true` (latest dev changes, syncs with upstream branch every hour).
-- `main` – Built from this repository's `main` branch (for CI/testing purposes only).
+- `main` – Built from this repository's `main` branch (internal, for CI/testing purposes only).
 
 ### Build Triggers
 
