@@ -53,7 +53,7 @@ Docker image tags track upstream Cubyz releases published at <https://github.com
 
 - `X.Y.Z` – Exact version (e.g., `0.1.0`), built with `-Drelease=true`.
 - `latest` – Most recent upstream release, built with `-Drelease=true`.
-- `dev` – Latest upstream `master` branch, built **without** `-Drelease=true` (for testing bleeding-edge changes).
+- `dev` – Latest upstream `master` branch, built **without** `-Drelease=true` (latest dev changes, syncs with upstream branch every hour).
 - `main` – Built from this repository's `main` branch (for CI/testing purposes only).
 
 ### Build Triggers
@@ -78,7 +78,7 @@ This ensures Docker images stay in sync with upstream.
 
 ### Picking a Tag
 
-For stable deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades. Use `dev` to test bleeding-edge changes from upstream master (not recommended for production).
+For stable deployments, pin an exact version (`X.Y.Z`). Use `latest` only when you intentionally want automatic upgrades. Use `dev` to test latest changes from upstream master (not recommended for production).
 
 ```bash
 # Exact version (recommended for production)
