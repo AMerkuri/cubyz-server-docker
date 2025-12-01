@@ -44,8 +44,8 @@ FROM alpine:3.20
 ARG USER_UID=1000
 ARG USER_GID=1000
 
-# Install netcat for healthcheck
-RUN apk add --no-cache netcat-openbsd
+# Install netcat for healthcheck and su-exec for privilege dropping
+RUN apk add --no-cache netcat-openbsd su-exec
 
 # Create non-root user with specified UID/GID
 RUN addgroup -g ${USER_GID} cubyz && \
@@ -78,9 +78,6 @@ USER cubyz
 
 # Expose default server port
 EXPOSE 47649/udp
-
-# Volume for persistent world data
-# VOLUME ["/cubyz/saves"]
 
 # Set environment variable defaults
 ENV CUBYZ_WORLD_NAME=world
