@@ -60,11 +60,11 @@ Docker image tags track upstream Cubyz releases published at <https://github.com
 
 | Trigger | Upstream Ref | Release Build | Image Tags |
 |---------|--------------|---------------|------------|
-| Push to `main` branch | `master` | ✅ Yes | `main` |
-| Pull request to `main` | `master` | ✅ Yes | `pr-X` |
-| Tag push (e.g., `v1.0.0`) | `v1.0.0` | ✅ Yes | `1.0.0`, `latest` |
-| Upstream tag detected (polling) | `v1.0.0` | ✅ Yes | `1.0.0`, `latest` |
-| Upstream master changes (polling) | `master` | ❌ No | `dev` |
+| Push to `main` branch | `master` | ✅ | `main` |
+| Pull request to `main` | `master` | ✅ | `pr-X` |
+| Tag push (e.g., `v1.0.0`) | `v1.0.0` | ✅ | `1.0.0`, `latest` |
+| Upstream tag detected (polling) | `v1.0.0` | ✅ | `1.0.0`, `latest` |
+| Upstream master changes (polling) | `master` | ❌ | `dev` |
 
 #### Automatic Upstream Polling
 
