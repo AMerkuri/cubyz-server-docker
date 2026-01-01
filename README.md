@@ -49,7 +49,7 @@ docker compose down
 
 ## Image Versioning
 
-Docker image tags track upstream Cubyz releases published at <https://github.com/PixelGuys/Cubyz/tags>. Upstream tags use plain semantic versioning (`0.0.1`). For any upstream release, a multi-architecture image (`linux/amd64`, `linux/arm64`) is built and pushed:
+Docker image tags track upstream Cubyz releases published at <https://github.com/PixelGuys/Cubyz/tags>. Upstream tags use plain semantic versioning (`0.1.0`). For any upstream release, a multi-architecture image (`linux/amd64`, `linux/arm64`) is built and pushed:
 
 - `X.Y.Z` – Exact version (e.g., `0.1.0`), built with `-Drelease=true`.
 - `latest` – Most recent upstream release, built with `-Drelease=true`.
@@ -96,7 +96,7 @@ Compose example with a pinned version:
 ```yaml
 services:
   cubyz:
-    image: ghcr.io/amerkuri/cubyz-server-docker:0.0.1
+    image: ghcr.io/amerkuri/cubyz-server-docker:0.1.0
     network_mode: host
     volumes:
       - ./saves:/cubyz/saves
@@ -105,12 +105,10 @@ services:
     restart: unless-stopped
 ```
 
-> **Note**: Image tag versions below `0.1.0` do not support headless server, therefore it will not run! Use `dev` tag instead.
-
 ### Upgrading
 
 1. Review available tags ([GitHub packages UI](https://github.com/AMerkuri/cubyz-server-docker/pkgs/container/cubyz-server-docker) or: `crane ls ghcr.io/amerkuri/cubyz-server-docker`).
-2. Update the tag in your deployment (e.g. bump `0.0.1` to `0.0.2`).
+2. Update the tag in your deployment (e.g. bump `0.1.0` to `0.1.1`).
 3. Pull & recreate containers:
 
 ```bash
